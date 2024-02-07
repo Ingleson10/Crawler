@@ -11,7 +11,7 @@ def crawl_website(url, ai_comando):
     soup = BeautifulSoup(response.text, 'html.parser') # vai buscar códigos em HTML e fazer leitura.
     maintag = soup.find('main')
     #print(maintag)
-    if maintag == None: #None palavra reservada
+    if maintag is None: #None palavra reservada
         maintag = soup
     #print(soup.get_text(separator='\n', strip=True))
     text = maintag.get_text(separator='\n', strip=True)
