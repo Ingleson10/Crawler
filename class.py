@@ -14,7 +14,7 @@ if resultado > 10:
 def resolver_equacao(x):
     return x*x + 4 * x + 2'''
 
-class Animal:
+'''class Animal:
     nome = ''
     especie = ''
     carnivoro = False
@@ -57,6 +57,8 @@ passaro.dormir()
 leao = Mamifero('Alex', 'Leao Branco', True)
 leao.comer()
 leao.mama()
-leao.dormir()
+leao.dormir()'''
+
+
 
 
