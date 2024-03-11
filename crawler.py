@@ -12,24 +12,27 @@ class WebsiteCrawler:
 
     def busca_dados(self):
         try:
-            response = requests.get(  self.url)
+            response = requests.get(self.url)
             response.raise_for_status()
-            soup = BeautifulSoup(response.text, 'html.parser')
-            maintag = soup.find('main')
-            if maintag is None:
-                maintag = soup
-            text = maintag.get_text(separator='\n', strip=True)
-            
-            if len(text) > self.max_chars:
-                text = text[:self.max_chars]
-
-            return text
-
+            return response.text
         except Exception as e:
             return f"Erro ao buscar dados: {str(e)}"
 
+    def analisa_dados(self, result_content):
+        pass
+
     def processa_dados(self, ai_command, text):
         try:
+            soup = BeautifulSoup(text, 'html.parser')
+            maintag = soup.find('main')
+
+            if maintag is None:
+                maintag = soup
+            text = maintag.get_text(separator='\n', strip=True)
+
+            if len(text) > self.max_chars:
+                text = text[:self.max_chars]
+
             client = OpenAI(api_key=self.api_key)
             completion = client.chat.completions.create(
                 model="gpt-3.5-turbo", messages=[
@@ -38,27 +41,30 @@ class WebsiteCrawler:
                 ])
 
             result_content = completion.choices[0].message
-            return f"Erro ao processar os dados: {str(e)}"
+            return result_content
 
-    def analisa_dados(self, result_content):
-        
+        except Exception as e:
+            return f"Erro ao processar os dados: {str(e)}"
 
     def salva_dados(self, result_content):
         try:
             path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
             config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
-            pdfkit.from_string(result.content, self.output_file, configuration=config)
+            pdfkit.from_string(result_content, self.output_file, configuration=config)
 
             return "Dados salvos com sucesso!!!"
 
         except Exception as e:
-
-            return f"Erro ao salvar os dados:" {str(e)}
+            return f"Erro ao salvar os dados: {str(e)}"
 
     def crawl(self, ai_command):
         text = self.busca_dados()
+        result_content = self.processa_dados(ai_command, text)
+        if result_content:
+            self.analisa_dados(result_content)
+            return self.salva_dados(result_content)
+        return "Nenhum conteúdo processado."
 
-# Testando com diferentes URLs e comandos
 meucrawler = "Seja um analisador de textos e responda somente as categorias do que se trata o texto no formato de tags com hashtags"
 minhaurl = 'https://docs.python.org/pt-br/3/tutorial/index.html'
 crawler1 = WebsiteCrawler(minhaurl, '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', 'output_meucrawler.pdf')
