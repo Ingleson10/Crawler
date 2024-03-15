@@ -10,26 +10,24 @@ load_dotenv()
 chatgpt_key = os.getenv('CHATGPT_KEY')
 
 class WebsiteCrawler:
-    def __init__(self, url, output_file, api_key=chatgpt_key, max_chars=2000):
-        self.url = url
+    def __init__(self, api_key=chatgpt_key, max_chars=2000):
         self.api_key = api_key
-        self.output_file = output_file
         self.max_chars = max_chars
 
-    def crawl(self, ai_command):
-        print('Executando...')
-        text_buscado = self.busca_dados()
+    def crawl(self, ai_command, url, output_file):
+        print('Inicializando...')
+        text_buscado = self.busca_dados(url)
         text_processado = self.processa_dados(text_buscado)
         if text_processado:
             text_analisado = self.analisa_dados(ai_command, text_processado)
-            self.salva_dados(text_analisado)
+            self.salva_dados(output_file,text_analisado)
         
         print('Finalizado!!!')
 
-    def busca_dados(self):
+    def busca_dados(self, url):
         print('Buscando...')
         try:
-            response = requests.get(self.url)
+            response = requests.get(url)
             response.encoding = response.apparent_encoding
             response.raise_for_status()
             return response.text
@@ -66,7 +64,7 @@ class WebsiteCrawler:
         result_content = completion.choices[0].message
         return result_content.content
 
-    def salva_dados(self, result_content):
+    def salva_dados(self, output_file, result_content):
         print('Salvando...')
         try:
             path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
@@ -75,7 +73,7 @@ class WebsiteCrawler:
                 'enable-local-file-access': True
             }
             config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
-            pdfkit.from_string(result_content, f'pdf/{self.output_file}', configuration=config, options=options)
+            pdfkit.from_string(result_content, f'pdf/{output_file}', configuration=config, options=options)
 
             return "Dados salvos com sucesso!!!"
 
