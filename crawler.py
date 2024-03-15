@@ -2,9 +2,16 @@ import requests
 from bs4 import BeautifulSoup
 import pdfkit
 from openai import OpenAI
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+chatgpt_key = os.getenv('CHATGPT_KEY')
+
 
 class WebsiteCrawler:
-    def __init__(self, url, api_key, output_file, max_chars=2000):
+    def __init__(self, url, output_file, api_key=chatgpt_key, max_chars=2000):
         self.url = url
         self.api_key = api_key
         self.output_file = output_file
@@ -41,7 +48,7 @@ class WebsiteCrawler:
                 ])
 
             result_content = completion.choices[0].message
-            return result_content
+            return result_content.content
 
         except Exception as e:
             return f"Erro ao processar os dados: {str(e)}"
@@ -50,7 +57,7 @@ class WebsiteCrawler:
         try:
             path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
             config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
-            pdfkit.from_string(result_content, self.output_file, configuration=config)
+            pdfkit.from_string(result_content, f'pdf/{self.output_file}', configuration=config)
 
             return "Dados salvos com sucesso!!!"
 
@@ -65,13 +72,4 @@ class WebsiteCrawler:
             return self.salva_dados(result_content)
         return "Nenhum conteúdo processado."
 
-meucrawler = "Seja um analisador de textos e responda somente as categorias do que se trata o texto no formato de tags com hashtags"
-minhaurl = 'https://docs.python.org/pt-br/3/tutorial/index.html'
-crawler1 = WebsiteCrawler(minhaurl, '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', 'output_meucrawler.pdf')
-resultado = crawler1.crawl(meucrawler)
 
-meuprofessor = 'Seja meu professor de python'
-crawler2 = WebsiteCrawler(minhaurl, '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', 'output_meuprofessor.pdf')
-result = crawler2.crawl(meuprofessor)
-
-print(resultado, result)
