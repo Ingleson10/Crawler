@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Crawler</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Website Crawler</h1>
+        <form id="crawlerForm">
+            <label for="url">URL:</label>
+            <input type="text" id="url" name="url" required>
+            <label for="ai_command">Comando de IA:</label>
+            <input type="text" id="ai_command" name="ai_command" required>
+            <label for="output_file">Arquivo de Saída:</label>
+            <input type="text" id="output_file" name="output_file" required>
+            <button type="submit">Rastrear</button>
+        </form>
+        <div id="results"></div>
+    </div>
+    <script>
+        document.getElementById('crawlerForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const url = document.getElementById('url').value;
+            const ai_command = document.getElementById('ai_command').value;
+            const output_file = document.getElementById('output_file').value;
+
+            fetch('/rastreamento', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    url: url,
+                    ai_command: ai_command,
+                    output_file: output_file
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = '<h2>Resultados</h2>';
+                if (data.error) {
+                    resultsDiv.innerHTML += `<p>Erro: ${data.error}</p>`;
+                } else {
+                    resultsDiv.innerHTML += `<p>${data.status}</p>`;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
