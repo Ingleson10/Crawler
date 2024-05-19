@@ -66,9 +66,6 @@ class WebsiteCrawler:
 
     def analisar_dados(self, comando_ai, texto):
         print('Analisando...')
-        '''if not self.chave_api:
-            print("Chave da API não encontrada. Por favor, defina a chave da API do OpenAI")'''
-        
         cliente = OpenAI(api_key=self.chave_api)
         try:
             conclusao = cliente.chat.completions.create(
