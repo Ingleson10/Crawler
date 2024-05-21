@@ -6,6 +6,23 @@
     <title>Website Crawler</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <style>
+        #loadingIndicator {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            z-index: -1; /* Coloca o indicador abaixo de todos os elementos */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            color: #555;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -21,12 +38,19 @@
         </form>
         <div id="results"></div>
     </div>
+    <div id="loadingIndicator">Carregando...</div> <!-- Movido para fora da div container -->
     <script>
         document.getElementById('crawlerForm').addEventListener('submit', function(event) {
             event.preventDefault();
             const url = document.getElementById('url').value;
             const ai_command = document.getElementById('ai_command').value;
             const output_file = document.getElementById('output_file').value;
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const resultsDiv = document.getElementById('results');
+
+            // Mostrar o indicador de carregamento
+            loadingIndicator.style.display = 'flex';
+            loadingIndicator.style.zIndex = 1000; // Ajusta o z-index para que o indicador fique acima de todos os elementos
 
             fetch('/rastreamento', {
                 method: 'POST',
@@ -41,13 +65,20 @@
             })
             .then(response => response.json())
             .then(data => {
-                const resultsDiv = document.getElementById('results');
+                // Esconder o indicador de carregamento
+                loadingIndicator.style.display = 'none';
+
                 resultsDiv.innerHTML = '<h2>Resultados</h2>';
                 if (data.error) {
                     resultsDiv.innerHTML += `<p>Erro: ${data.error}</p>`;
                 } else {
                     resultsDiv.innerHTML += `<p>${data.status}</p>`;
                 }
+            })
+            .catch(error => {
+                // Esconder o indicador de carregamento em caso de erro
+                loadingIndicator.style.display = 'none';
+                resultsDiv.innerHTML = `<p>Erro: ${error.message}</p>`;
             });
         });
     </script>

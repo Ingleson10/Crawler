@@ -66,6 +66,7 @@ class WebsiteCrawler:
 
     def analisar_dados(self, comando_ai, texto):
         print('Analisando...')
+        
         cliente = OpenAI(api_key=self.chave_api)
         try:
             conclusao = cliente.chat.completions.create(
@@ -82,15 +83,14 @@ class WebsiteCrawler:
     def salvar_dados(self, arquivo_saida, resultado_conteudo):
         print(f'Salvando {arquivo_saida}...')
         try:
+            # Configurar pdfkit com wkhtmltopdf
             path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
-            opcoes = {
+            config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+            options = {
                 'encoding': 'UTF-8',
                 'enable-local-file-access': True
             }
-            config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
-            pdfkit.from_string(resultado_conteudo, f'pdf/{arquivo_saida}', configuration=config, options=opcoes)
-
-            print(f"Dados salvos com sucesso em {arquivo_saida}!!!")
-
+            pdfkit.from_string(resultado_conteudo, f'pdf/{arquivo_saida}.pdf', configuration=config, options=options)
+            print(f"Dados salvos com sucesso em pdf/{arquivo_saida}.pdf!!!")
         except Exception as e:
             print(f"Erro ao salvar dados em {arquivo_saida}: {str(e)}")

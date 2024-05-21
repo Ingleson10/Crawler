@@ -15,9 +15,6 @@ def rastreamento():
     ai_command = request.form['ai_command']
     output_file = request.form['output_file']
     
-    if not output_file.endswith('.pdf'):
-        output_file += '.pdf'
-    
     crawler.rastrear(ai_command, [url], [output_file])
     
     return jsonify({"status": "Rastreamento completo, verifique o arquivo PDF de saída."})
@@ -31,13 +28,10 @@ def iniciar_rastreamento():
     url = data.get('url')
     output_file = data.get('output_file')
 
-    if not output_file.endswith('.pdf'):
-        output_file += '.pdf'
-
     if not all([ai_command, url, output_file]):
         return jsonify({'error': 'Parâmetros necessários ausentes'}), 400
 
-    crawler.rastrear(ai_command, [url], [output_file])
+    crawler.crawl(ai_command, [url], [output_file])
     return jsonify({'message': 'Rastreamento iniciado com sucesso!'})
 
 @app.route('/rastreamento/pesquisar', methods=['GET'])
@@ -51,13 +45,10 @@ def atualizar_rastreamento():
     url = data.get('url')
     output_file = data.get('output_file')
 
-    if not output_file.endswith('.pdf'):
-        output_file += '.pdf'
-
     if not all([ai_command, url, output_file]):
         return jsonify({'error': 'Parâmetros necessários ausentes'}), 400
 
-    crawler.rastrear(ai_command, [url], [output_file])
+    crawler.crawl(ai_command, [url], [output_file])
     return jsonify({'message': 'Parâmetros de rastreamento atualizados com sucesso!'})
 
 @app.route('/rastreamento/cancelar', methods=['DELETE'])
