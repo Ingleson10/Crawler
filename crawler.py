@@ -1,21 +1,24 @@
 import requests
 from bs4 import BeautifulSoup
+from textblob import TextBlob
 import pdfkit
 import csv
 import json
-from textblob import TextBlob
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
+from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 
 load_dotenv()
 
 chave_openai = os.getenv('CHAVE_OPENAI')
 
 class WebsiteCrawler:
-    def __init__(self, chave_api=chave_openai, max_chars=2000):
+    def __init__(self, chave_api=chave_openai, max_chars=2000, max_workers=5):
         self.chave_api = chave_api
         self.max_chars = max_chars
+        self.executor = ThreadPoolExecutor(max_workers=max_workers)
 
     def rastrear(self, comando_ai, urls, arquivos_saida):
         if not self.chave_api:
@@ -26,27 +29,75 @@ class WebsiteCrawler:
             print("Erro: Número de URLs e arquivos de saída devem ser iguais.")
             return
         
+        tasks = []
         for url, arquivo_saida in zip(urls, arquivos_saida):
-            print(f'Processando {url}...')
-            texto_encontrado = self.buscar_dados(url)
-            if texto_encontrado:
-                texto_processado = self.processar_dados(texto_encontrado)
-                if texto_processado:
-                    texto_analisado = self.analisar_dados(comando_ai, texto_processado)
-                    if texto_analisado:
-                        self.salvar_dados(arquivo_saida, texto_analisado, texto_processado)
+            tasks.append(self.executor.submit(self.processar_url, comando_ai, url, arquivo_saida))
+        
+        for task in tasks:
+            task.result()
+        
         print('Concluído!!!')
+    
+    def analisar_sentimento(self, texto):
+        print('Analisando Sentimento...')
+        try:
+            blob = TextBlob(texto)
+            sentimento = blob.sentiment
+            return {'polarity': sentimento.polarity, 'subjectivity': sentimento.subjectivity}
+        except Exception as e:
+            print(f"Erro ao analisar sentimento: {str(e)}")
 
+    def processar_url(self, comando_ai, url, arquivo_saida):
+        print(f'Processando {url}...')
+        texto_encontrado, dados_estruturados = self.buscar_dados(url)
+        if texto_encontrado:
+            texto_processado = self.processar_dados(texto_encontrado)
+            if texto_processado:
+                texto_analisado = self.analisar_dados(comando_ai, texto_processado)
+                if texto_analisado:
+                    sentimento = self.analisar_sentimento(texto_processado)
+                    if sentimento:
+                        self.salvar_dados(arquivo_saida, texto_analisado, dados_estruturados, sentimento)
+
+    @lru_cache(maxsize=128)
     def buscar_dados(self, url):
         print(f'Buscando {url}...')
         try:
             resposta = requests.get(url)
             resposta.encoding = resposta.apparent_encoding
             resposta.raise_for_status()
-            return resposta.text
+            soup = BeautifulSoup(resposta.text, 'html.parser')
+            texto = resposta.text
+            dados_estruturados = self.extrair_dados_estruturados(soup)
+            return texto, dados_estruturados
         except requests.exceptions.RequestException as e:
             print(f"Erro ao buscar dados de {url}: {str(e)}")
-            return None
+            return None, None
+
+    def extrair_dados_estruturados(self, soup):
+        dados_estruturados = {
+            'tables': [],
+            'products': []
+        }
+        
+        # Extraindo tabelas
+        for tabela in soup.find_all('table'):
+            headers = [header.get_text(strip=True) for header in tabela.find_all('th')]
+            rows = []
+            for row in tabela.find_all('tr'):
+                cells = [cell.get_text(strip=True) for cell in row.find_all(['td', 'th'])]
+                if cells:
+                    rows.append(cells)
+            if headers and rows:
+                dados_estruturados['tables'].append({'headers': headers, 'rows': rows})
+
+        # Extraindo listas de produtos (exemplo para ul > li)
+        for lista in soup.find_all('ul'):
+            produtos = [item.get_text(strip=True) for item in lista.find_all('li')]
+            if produtos:
+                dados_estruturados['products'].append(produtos)
+        
+        return dados_estruturados
 
     def processar_dados(self, texto):
         print('Processando...')
@@ -83,23 +134,10 @@ class WebsiteCrawler:
             print(f"Erro ao analisar dados: {str(e)}")
             return None
 
-    def analisar_sentimento(self, texto):
-        print('Analisando sentimento...')
-        try:
-            blob = TextBlob(texto)
-            sentimento = blob.sentiment
-            return {'polarity': sentimento.polarity, 'subjectivity': sentimento.subjectivity}
-        except Exception as e:
-            print(f"Erro ao analisar sentimento: {str(e)}")
-            return None
-
-    def salvar_dados(self, arquivo_saida, resultado_conteudo, texto_processado):
+    def salvar_dados(self, arquivo_saida, resultado_conteudo, dados_estruturados, sentimento):
         print(f'Salvando {arquivo_saida}...')
         try:
-            # Analisar sentimento
-            sentimento = self.analisar_sentimento(texto_processado)
-
-            # Configurar pdfkit com wkhtmltopdf
+            # Salvar PDF
             path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
             config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
             options = {
@@ -107,16 +145,37 @@ class WebsiteCrawler:
                 'enable-local-file-access': True
             }
             pdfkit.from_string(resultado_conteudo, f'pdf/{arquivo_saida}.pdf', configuration=config, options=options)
-
-            # Salvar sentimento como CSV e JSON
-            with open(f'csv/{arquivo_saida}.csv', mode='w', newline='', encoding='utf-8') as file:
+            print(f"Dados salvos com sucesso em pdf/{arquivo_saida}.pdf!!!")
+            
+            # Salvar dados estruturados como CSV
+            csv_arquivo = f'csv/{arquivo_saida}.csv'
+            os.makedirs(os.path.dirname(csv_arquivo), exist_ok=True)
+            with open(csv_arquivo, mode='w', newline='', encoding='utf-8') as file:
+                writer = csv.writer(file)
+                for tabela in dados_estruturados['tables']:
+                    writer.writerow(tabela['headers'])
+                    writer.writerows(tabela['rows'])
+                    writer.writerow([])  # Linha em branco entre tabelas
+            print(f"Dados estruturados salvos com sucesso em {csv_arquivo}!!!")
+            
+            # Salvar dados estruturados como JSON
+            json_arquivo = f'json/{arquivo_saida}.json'
+            os.makedirs(os.path.dirname(json_arquivo), exist_ok=True)
+            with open(json_arquivo, mode='w', encoding='utf-8') as file:
+                json.dump(dados_estruturados, file, ensure_ascii=False, indent=4)
+            print(f"Dados estruturados salvos com sucesso em {json_arquivo}!!!")
+            
+            # Salvar sentimento como CSV
+            with open(f'csv/{arquivo_saida}_sentimento.csv', mode='w', newline='', encoding='utf-8') as file:
                 writer = csv.writer(file)
                 writer.writerow(['Texto', 'Polaridade', 'Subjetividade'])
-                writer.writerow([texto_processado, sentimento['polarity'], sentimento['subjectivity']])
-
-            with open(f'json/{arquivo_saida}.json', mode='w', encoding='utf-8') as file:
-                json.dump({'texto': texto_processado, 'polaridade': sentimento['polarity'], 'subjetividade': sentimento['subjectivity']}, file, ensure_ascii=False, indent=4)
-
-            print(f"Dados salvos com sucesso em pdf/{arquivo_saida}.pdf, csv/{arquivo_saida}.csv, json/{arquivo_saida}.json!!!")
+                writer.writerow([resultado_conteudo, sentimento['polarity'], sentimento['subjectivity']])
+            print(f"Sentimento salvo com sucesso em csv/{arquivo_saida}_sentimento.csv!!!")
+        
+            # Salvar sentimento como JSON
+            with open(f'json/{arquivo_saida}_sentimento.json', mode='w', encoding='utf-8') as file:
+                json.dump({'texto': resultado_conteudo, 'polaridade': sentimento['polarity'], 'subjetividade': sentimento['subjectivity']}, file, ensure_ascii=False, indent=4)
+            print(f"Sentimento salvo com sucesso em json/{arquivo_saida}_sentimento.json!!!")
+        
         except Exception as e:
             print(f"Erro ao salvar dados em {arquivo_saida}: {str(e)}")
