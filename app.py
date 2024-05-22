@@ -17,7 +17,7 @@ def rastreamento():
     
     crawler.rastrear(ai_command, [url], [output_file])
     
-    return jsonify({"status": "Rastreamento completo, verifique o arquivo PDF de saída."})
+    return jsonify({"status": "Rastreamento completo, verifique os arquivos de saída."})
 
 # Rotas adicionais baseadas no arquivo `server.py`
 
@@ -31,7 +31,7 @@ def iniciar_rastreamento():
     if not all([ai_command, url, output_file]):
         return jsonify({'error': 'Parâmetros necessários ausentes'}), 400
 
-    crawler.crawl(ai_command, [url], [output_file])
+    crawler.rastrear(ai_command, [url], [output_file])
     return jsonify({'message': 'Rastreamento iniciado com sucesso!'})
 
 @app.route('/rastreamento/pesquisar', methods=['GET'])
@@ -48,7 +48,7 @@ def atualizar_rastreamento():
     if not all([ai_command, url, output_file]):
         return jsonify({'error': 'Parâmetros necessários ausentes'}), 400
 
-    crawler.crawl(ai_command, [url], [output_file])
+    crawler.rastrear(ai_command, [url], [output_file])
     return jsonify({'message': 'Parâmetros de rastreamento atualizados com sucesso!'})
 
 @app.route('/rastreamento/cancelar', methods=['DELETE'])
@@ -62,4 +62,6 @@ def status_rastreamento():
 
 if __name__ == '__main__':
     os.makedirs('pdf', exist_ok=True)
+    os.makedirs('csv', exist_ok=True)
+    os.makedirs('json', exist_ok=True)
     app.run(debug=True)

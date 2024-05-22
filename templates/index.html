@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Website Crawler</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <style>
         #loadingIndicator {
@@ -16,7 +16,6 @@
             height: 100%;
             background: rgba(255, 255, 255, 0.8);
             z-index: -1; /* Coloca o indicador abaixo de todos os elementos */
-            display: flex;
             justify-content: center;
             align-items: center;
             font-size: 1.5em;
@@ -25,20 +24,26 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Website Crawler</h1>
+    <div class="container mt-5">
+        <h1 class="mb-4">Website Crawler</h1>
         <form id="crawlerForm">
-            <label for="url">URL:</label>
-            <input type="text" id="url" name="url" required>
-            <label for="ai_command">Comando de IA:</label>
-            <input type="text" id="ai_command" name="ai_command" required>
-            <label for="output_file">Arquivo de Saída:</label>
-            <input type="text" id="output_file" name="output_file" required>
-            <button type="submit">Rastrear</button>
+            <div class="mb-3">
+                <label for="url" class="form-label">URL:</label>
+                <input type="text" id="url" name="url" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="ai_command" class="form-label">Comando de IA:</label>
+                <input type="text" id="ai_command" name="ai_command" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="output_file" class="form-label">Arquivo de Saída:</label>
+                <input type="text" id="output_file" name="output_file" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Rastrear</button>
         </form>
-        <div id="results"></div>
+        <div id="results" class="mt-4"></div>
     </div>
-    <div id="loadingIndicator">Carregando...</div> <!-- Movido para fora da div container -->
+    <div id="loadingIndicator" style="display: none;">Carregando...</div> <!-- Inicia oculto -->
     <script>
         document.getElementById('crawlerForm').addEventListener('submit', function(event) {
             event.preventDefault();
