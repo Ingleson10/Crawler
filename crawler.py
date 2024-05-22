@@ -4,6 +4,7 @@ from textblob import TextBlob
 import pdfkit
 import csv
 import json
+import psycopg2
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
@@ -12,6 +13,13 @@ from functools import lru_cache
 
 load_dotenv()
 
+# Acessar variáveis de ambiente
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+
 chave_openai = os.getenv('CHAVE_OPENAI')
 
 class WebsiteCrawler:
@@ -19,6 +27,63 @@ class WebsiteCrawler:
         self.chave_api = chave_api
         self.max_chars = max_chars
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
+        
+    def __del__(self):
+        if self.conn:
+            self.conn.close() # Fechar a conexão com o banco de dados ao destruir o objeto
+            
+    def conectar_bd(self):
+        try:
+            conn = psycopg2.connect(
+                dbname=DB_NAME,
+                user=DB_USER,
+                password=DB_PASSWORD,
+                host=DB_HOST,
+                port=DB_PORT
+            )
+            return conn
+        except psycopg2.Error as e:
+            print(f"Erro ao conectar ao banco de dados: {e}")
+            return None
+
+    def criar_tabela_historico(self):
+        try:
+            conn = self.conectar_bd()
+            if conn:
+                cursor = conn.cursor()
+                create_table_query = """
+                CREATE TABLE IF NOT EXISTS historico (
+                    id SERIAL PRIMARY KEY,
+                    url TEXT,
+                    comando_ai TEXT,
+                    arquivo_saida TEXT,
+                    pdf_file BYTEA,
+                    csv_file TEXT,
+                    json_file TEXT,
+                    data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+                cursor.execute(create_table_query)
+                conn.commit()
+                cursor.close()
+                conn.close()
+                print('Tabela "historico" criada com sucesso!')
+        except Exception as e:
+            print(f"Erro ao criar a tabela 'historico': {str(e)}")
+            
+    def salvar_historico(self, url, comando_ai, arquivo_saida):
+        try:
+            cursor = self.conn.cursor()
+            
+            # Inserir os dados no banco de dados
+            cursor.execute("INSERT INTO historico (url, comando_ai, arquivo_saida) VALUES (%s, %s, %s)", (url, comando_ai, arquivo_saida))
+
+            # Confirmar a transação
+            self.conn.commit()
+
+            print('Histórico salvo com sucesso!')
+        except psycopg2.Error as e:
+            print(f"Erro ao salvar histórico: {e}")
 
     def rastrear(self, comando_ai, urls, arquivos_saida):
         if not self.chave_api:
